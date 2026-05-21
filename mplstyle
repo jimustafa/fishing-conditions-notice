@@ -1,0 +1,14 @@
+figure.constrained_layout.use : True
+figure.figsize : 6, 4.5
+
+axes.titlesize : 16
+axes.labelsize : 12
+
+xtick.labelsize : 12
+ytick.labelsize : 12
+
+legend.fontsize : 12
+
+lines.linewidth : 2
+
+savefig.format : png

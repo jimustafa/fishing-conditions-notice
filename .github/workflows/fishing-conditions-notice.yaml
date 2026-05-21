@@ -1,0 +1,50 @@
+name: Fishing Conditions Notice
+
+on:
+  schedule:
+    - cron: "0 23 * * *"  # 4pm PDT (UTC-7); 3pm when PST (UTC-8)
+  workflow_dispatch:
+    inputs:
+      email_to:
+        description: "Recipient(s) — comma-separated, overrides EMAIL_TO"
+        required: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    env:
+      UV_SYSTEM_PYTHON: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv pip install -r requirements/requirements.txt
+
+      - name: Send notification
+        env:
+          LOCATION: ${{ vars.LOCATION }}
+          AQUALINK_SITE_ID: ${{ vars.AQUALINK_SITE_ID }}
+          WATER_TEMPERATURE_THRESHOLD: ${{ vars.WATER_TEMPERATURE_THRESHOLD }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          SMTP_USER: ${{ vars.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          DAY=$(date -u +%u)  # 1=Mon … 2=Tue … 5=Fri … 7=Sun
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            uv run scripts/fishing-conditions-notice.py --email-to "${{ inputs.email_to }}"
+          elif [ "$DAY" = "5" ]; then
+            uv run scripts/fishing-conditions-notice.py
+          elif [ "$DAY" = "2" ]; then
+            uv run scripts/fishing-conditions-notice.py --water-temperature-threshold "${{ vars.WATER_TEMPERATURE_THRESHOLD }}"
+          fi

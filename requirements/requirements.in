@@ -1,0 +1,10 @@
+ephem
+jinja2
+matplotlib
+pandas
+python-dotenv
+questionary
+requests
+rich
+timezonefinder
+typer
