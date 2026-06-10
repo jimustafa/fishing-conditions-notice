@@ -2,7 +2,7 @@ name: Fishing Conditions Notice
 
 on:
   schedule:
-    - cron: "0 23 * * *"  # 4pm PDT (UTC-7); 3pm when PST (UTC-8)
+    - cron: "0 23 * * 2,5"  # Tue/Fri 4pm PDT (UTC-7); 3pm PST (UTC-8)
   workflow_dispatch:
     inputs:
       email_to:
