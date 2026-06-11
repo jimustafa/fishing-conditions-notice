@@ -487,7 +487,7 @@ def main(
         water_temperature_threshold,
         plot_days,
     )
-    html = render_html(
+    render_args = (
         site_id,
         avg_temperature,
         latest_temperature,
@@ -498,8 +498,8 @@ def main(
         latest_data,
         moon_data,
         plot_b64,
-        plot_src="cid:plot" if not dry_run and not below_threshold else None,
     )
+    html = render_html(*render_args)
 
     if html_out:
         html_out.parent.mkdir(parents=True, exist_ok=True)
@@ -533,7 +533,7 @@ def main(
         typer.echo("Error: EMAIL_TO not set", err=True)
         raise typer.Exit(1)
 
-    send_notice(location, avg_temperature, email_to, html, plot_b64)
+    send_notice(location, avg_temperature, email_to, render_html(*render_args, plot_src="cid:plot"), plot_b64)
     print(f"Notice sent: {avg_temperature:.1f}°F")
 
 
