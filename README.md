@@ -32,7 +32,7 @@ uv run scripts/fishing-conditions-notice.py --help
 | `--plot-days` | `7` | Days of history shown in plot |
 | `--email-to` | env: `EMAIL_TO` | Override recipient(s) — useful for local testing |
 | `--dry-run` | — | Generate email without sending; opens preview in browser |
-| `--html-out` | — | Write HTML to a file instead of opening browser (used with `--dry-run`) |
+| `--output` / `-o` | — | Write HTML to a file; suppresses browser open in `--dry-run` |
 | `--dev` | — | Watch source files and serve live-reloading preview at `http://127.0.0.1:5500` |
 
 ### `scripts/find-nearest-site.py`

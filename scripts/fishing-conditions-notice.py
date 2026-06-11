@@ -331,17 +331,10 @@ def render_html(
 
 
 def send_notice(
-    site_id: int,
     location: str,
     avg_temperature: float,
-    latest_temperature: float,
-    water_temperature_threshold: float | None,
-    check_hours: int,
-    reading_count: int,
-    timezone_name: str,
     email_to: str,
-    latest_data: dict[str, float | None] | None,
-    moon_data: dict | None,
+    html: str,
     plot_b64: str,
 ) -> None:
     email_from = os.environ["EMAIL_FROM"]
@@ -349,19 +342,6 @@ def send_notice(
     smtp_password = os.environ["SMTP_PASSWORD"]
     smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-    html = render_html(
-        site_id,
-        avg_temperature,
-        latest_temperature,
-        water_temperature_threshold,
-        check_hours,
-        reading_count,
-        timezone_name,
-        latest_data,
-        moon_data,
-        plot_b64,
-        plot_src="cid:plot",
-    )
     msg = MIMEMultipart("related")
     msg["Subject"] = f"Fishing Conditions — {location} · {avg_temperature:.1f}°F"
     msg["From"] = email_from
@@ -452,7 +432,7 @@ def main(
     plot_days: Annotated[int, typer.Option()] = DEFAULT_PLOT_DAYS,
     email_to: Annotated[str | None, typer.Option(envvar="EMAIL_TO")] = None,
     dry_run: Annotated[bool, typer.Option("--dry-run")] = False,
-    html_out: Annotated[Path | None, typer.Option("--html-out")] = None,
+    html_out: Annotated[Path | None, typer.Option("--output", "-o")] = None,
     dev: Annotated[bool, typer.Option("--dev")] = False,
 ) -> None:
     if not os.environ.get("EMAIL_FROM"):
@@ -501,30 +481,33 @@ def main(
     )
 
     timezone_info = ZoneInfo(timezone_name)
+    plot_b64 = make_plot(
+        series.set_axis(series.index.tz_convert(timezone_info).tz_localize(None)),
+        site_id,
+        water_temperature_threshold,
+        plot_days,
+    )
+    html = render_html(
+        site_id,
+        avg_temperature,
+        latest_temperature,
+        water_temperature_threshold,
+        check_hours,
+        reading_count,
+        timezone_name,
+        latest_data,
+        moon_data,
+        plot_b64,
+        plot_src="cid:plot" if not dry_run and not below_threshold else None,
+    )
+
+    if html_out:
+        html_out.parent.mkdir(parents=True, exist_ok=True)
+        html_out.write_text(html)
+        print(f"HTML written to {html_out}")
 
     if dry_run:
-        plot_b64 = make_plot(
-            series.set_axis(series.index.tz_convert(timezone_info).tz_localize(None)),
-            site_id,
-            water_temperature_threshold,
-            plot_days,
-        )
-        html = render_html(
-            site_id,
-            avg_temperature,
-            latest_temperature,
-            water_temperature_threshold,
-            check_hours,
-            reading_count,
-            timezone_name,
-            latest_data,
-            moon_data,
-            plot_b64,
-        )
-        if html_out:
-            html_out.write_text(html)
-            print(f"HTML written to {html_out}")
-        else:
+        if not html_out:
             with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as tf:
                 tf.write(html)
                 webbrowser.open(f"file://{tf.name}")
@@ -545,31 +528,12 @@ def main(
         else "no threshold set"
     )
     print(f"Sending notice — {reason}")
-    plot_b64 = make_plot(
-        series.set_axis(series.index.tz_convert(timezone_info).tz_localize(None)),
-        site_id,
-        water_temperature_threshold,
-        plot_days,
-    )
 
     if email_to is None:
         typer.echo("Error: EMAIL_TO not set", err=True)
         raise typer.Exit(1)
 
-    send_notice(
-        site_id,
-        location,
-        avg_temperature,
-        latest_temperature,
-        water_temperature_threshold,
-        check_hours,
-        reading_count,
-        timezone_name,
-        email_to,
-        latest_data,
-        moon_data,
-        plot_b64,
-    )
+    send_notice(location, avg_temperature, email_to, html, plot_b64)
     print(f"Notice sent: {avg_temperature:.1f}°F")
 
 

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       email_to:
-        description: "Recipient(s) — comma-separated, overrides EMAIL_TO"
+        description: "Recipient(s)"
         required: true
 
 jobs:
@@ -38,13 +38,19 @@ jobs:
           SMTP_USER: ${{ vars.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_TO: ${{ inputs.email_to || secrets.EMAIL_TO }}
         run: |
           DAY=$(date -u +%u)  # 1=Mon … 2=Tue … 5=Fri … 7=Sun
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            uv run scripts/fishing-conditions-notice.py --email-to "${{ inputs.email_to }}"
+            uv run scripts/fishing-conditions-notice.py --output artifacts/fishing-conditions.html
           elif [ "$DAY" = "5" ]; then
-            uv run scripts/fishing-conditions-notice.py
+            uv run scripts/fishing-conditions-notice.py --output artifacts/fishing-conditions.html
           elif [ "$DAY" = "2" ]; then
-            uv run scripts/fishing-conditions-notice.py --water-temperature-threshold "${{ vars.WATER_TEMPERATURE_THRESHOLD }}"
+            uv run scripts/fishing-conditions-notice.py --water-temperature-threshold "${{ vars.WATER_TEMPERATURE_THRESHOLD }}" --output artifacts/fishing-conditions.html
           fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: artifacts/
+          if-no-files-found: ignore
